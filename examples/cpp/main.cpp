@@ -239,6 +239,17 @@ void TestThirdParty() {
       false, "image");
 }
 
+void TestImportant() {
+  Engine engine("-advertisement-icon$important\n"
+                "@@-advertisement-icon-good\n");
+  Check(true, false, false, true, "", "Exactly matching important rule", engine,
+      "http://example.com/-advertisement-icon", "example.com", "example.com",
+      false, "image");
+  Check(true, false, false, true, "", "Matching exception rule and important rule", engine,
+      "http://example.com/-advertisement-icon-good", "example.com", "example.com",
+      false, "image");
+}
+
 void TestDefaultLists() {
   std::vector<FilterList>& default_lists = FilterList::GetDefaultLists();
   assert(default_lists.size() == 7);
@@ -286,6 +297,7 @@ int main() {
   TestRedirect();
   TestExplicitCancel();
   TestThirdParty();
+  TestImportant();
   TestDefaultLists();
   TestRegionalLists();
   cout << num_passed << " passed, " <<
