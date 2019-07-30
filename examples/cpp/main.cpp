@@ -1,5 +1,6 @@
 #include <iostream>
 #include <assert.h>
+#include <algorithm>
 #include "wrapper.hpp"
 
 using namespace std;

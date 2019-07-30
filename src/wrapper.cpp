@@ -1,5 +1,6 @@
 #include "wrapper.hpp"
 #include <iostream>
+#include <cstring>
 using namespace std;
 
 extern "C" {
