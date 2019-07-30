@@ -71,17 +71,20 @@ void Assert(bool value, const std::string& message) {
 
 void Check(bool expected_result,
     bool expected_cancel,
-    bool expected_saved_from_exception,
+    bool expected_did_match_exception,
+    bool expected_did_match_important,
     std::string expected_redirect,
     const std::string& test_description,
     Engine& engine, const std::string& url, const std::string& host,
     const std::string& tab_host, bool third_party,
     const std::string& resource_type) {
   bool cancel;
-  bool saved_from_exception;
+  bool did_match_exception;
+  bool did_match_important;
   std::string redirect;
   bool match = engine.matches(url, host, tab_host, third_party,
-      resource_type, &cancel, &saved_from_exception, &redirect);
+      resource_type, &cancel, &did_match_exception,
+      &did_match_important, &redirect);
   cout << test_description << "... ";
   if (expected_result != match) {
     cout << "Failed!" << endl;
@@ -91,9 +94,13 @@ void Check(bool expected_result,
     cout << "Failed!" << endl;
     cout << "Unexpected cancel value: " << url <<
       " in " << tab_host << endl;
-  } else if (saved_from_exception != expected_saved_from_exception) {
+  } else if (did_match_exception != expected_did_match_exception) {
     cout << "Failed!" << endl;
-    cout << "Unexpected saved from exception value: " << url <<
+    cout << "Unexpected did match exception value: " << url <<
+      " in " << tab_host << endl;
+  } else if (did_match_important != expected_did_match_important) {
+    cout << "Failed!" << endl;
+    cout << "Unexpected did match important value: " << url <<
       " in " << tab_host << endl;
   } else {
     cout << "Passed!" << endl;
@@ -101,7 +108,8 @@ void Check(bool expected_result,
   }
   assert(expected_result == match);
   assert(cancel == expected_cancel);
-  assert(saved_from_exception == expected_saved_from_exception);
+  assert(did_match_exception == expected_did_match_exception);
+  assert(did_match_important == expected_did_match_important);
   assert(redirect == expected_redirect);
 }
 
@@ -112,11 +120,11 @@ void TestBasics() {
                 "-advertisement/script.\n"
                 "@@good-advertisement\n"
                 );
-  Check(true, false, false, "", "Basic match", engine, "http://example.com/-advertisement-icon.",
+  Check(true, false, false, false, "", "Basic match", engine, "http://example.com/-advertisement-icon.",
       "example.com", "example.com", false , "image");
-  Check(false, false, false, "", "Basic not match", engine, "https://brianbondy.com",
+  Check(false, false, false, false, "", "Basic not match", engine, "https://brianbondy.com",
       "brianbondy.com", "example.com", true, "image");
-  Check(false, false, true, "", "Basic saved from exception", engine, "http://example.com/good-advertisement-icon.",
+  Check(false, false, true, false, "", "Basic saved from exception", engine, "http://example.com/good-advertisement-icon.",
       "example.com", "example.com", false, "image");
 }
 
@@ -127,11 +135,11 @@ void TestAddingFilters() {
   engine.addFilter("-advertisement.");
   engine.addFilter("-advertisement/script.");
   engine.addFilter("@@good-advertisement");
-  Check(true, false, false, "", "Basic match", engine, "http://example.com/-advertisement-icon.",
+  Check(true, false, false, false, "", "Basic match", engine, "http://example.com/-advertisement-icon.",
       "example.com", "example.com", false , "image");
-  Check(false, false, false, "", "Basic not match", engine, "https://brianbondy.com",
+  Check(false, false, false, false, "", "Basic not match", engine, "https://brianbondy.com",
       "brianbondy.com", "example.com", true, "image");
-  Check(false, false, true, "", "Basic saved from exception", engine, "http://example.com/good-advertisement-icon.",
+  Check(false, false, true, false, "", "Basic saved from exception", engine, "http://example.com/good-advertisement-icon.",
       "example.com", "example.com", false, "image");
 }
 
@@ -139,16 +147,16 @@ void TestDeserialization() {
   Engine engine("");
   engine.deserialize(reinterpret_cast<const char*>(ad_banner_dat_buffer),
       sizeof(ad_banner_dat_buffer)/sizeof(ad_banner_dat_buffer[0]));
-  Check(true, false, false, "", "Basic match after deserialization", engine, "http://example.com/ad-banner.gif",
+  Check(true, false, false, false, "", "Basic match after deserialization", engine, "http://example.com/ad-banner.gif",
       "example.com", "example.com", false , "image");
 
   Engine engine2("");
   engine2.deserialize(reinterpret_cast<const char*>(ad_banner_with_tag_abc_dat_buffer),
       sizeof(ad_banner_with_tag_abc_dat_buffer)/sizeof(ad_banner_with_tag_abc_dat_buffer[0]));
-  Check(false, false, false, "", "Basic match after deserialization for a buffer with tags and no tag match", engine2, "http://example.com/ad-banner.gif",
+  Check(false, false, false, false, "", "Basic match after deserialization for a buffer with tags and no tag match", engine2, "http://example.com/ad-banner.gif",
       "example.com", "example.com", false , "image");
   engine2.addTag("abc");
-  Check(true, false, false, "", "Basic match after deserialization for a buffer with tags and a tag match", engine2, "http://example.com/ad-banner.gif",
+  Check(true, false, false, false, "", "Basic match after deserialization for a buffer with tags and a tag match", engine2, "http://example.com/ad-banner.gif",
       "example.com", "example.com", false , "image");
 
   // Deserialize after adding tag still works
@@ -156,13 +164,13 @@ void TestDeserialization() {
   engine3.addTag("abc");
   engine3.deserialize(reinterpret_cast<const char*>(ad_banner_with_tag_abc_dat_buffer),
       sizeof(ad_banner_with_tag_abc_dat_buffer)/sizeof(ad_banner_with_tag_abc_dat_buffer[0]));
-  Check(true, false, false, "", "Basic match after deserialization with resources with a tag on the engine before", engine3, "http://example.com/ad-banner.gif",
+  Check(true, false, false, false, "", "Basic match after deserialization with resources with a tag on the engine before", engine3, "http://example.com/ad-banner.gif",
       "example.com", "example.com", false , "image");
 
   Engine engine4("");
   engine4.deserialize(reinterpret_cast<const char*>(ad_banner_with_resources_abc_dat_buffer),
       sizeof(ad_banner_with_resources_abc_dat_buffer)/sizeof(ad_banner_with_resources_abc_dat_buffer[0]));
-  Check(true, false, false, "data:text/plain;base64,", "Basic match after deserialization with resources", engine4, "http://example.com/ad-banner.gif",
+  Check(true, false, false, false, "data:text/plain;base64,", "Basic match after deserialization with resources", engine4, "http://example.com/ad-banner.gif",
       "example.com", "example.com", false , "image");
 }
 
@@ -171,22 +179,22 @@ void TestTags() {
                 "-advertisement-management$tag=abc\n"
                 "-advertisement.$tag=abc\n"
                 "-advertisement/script.$tag=abc\n");
-  Check(false, false, false, "", "Without needed tags", engine,
+  Check(false, false, false, false, "", "Without needed tags", engine,
       "http://example.com/-advertisement-icon.", "example.com", "example.com",
       false, "image");
   engine.addTag("abc");
   Assert(engine.tagExists("abc"), "abc tag should exist");
   Assert(!engine.tagExists("abcd"), "abcd should not exist");
-  Check(true, false, false, "", "With needed tags",
+  Check(true, false, false, false, "", "With needed tags",
       engine, "http://example.com/-advertisement-icon.", "example.com",
       "example.com", false, "image");
   // Adding a second tag doesn't clear the first.
   engine.addTag("hello");
-  Check(true, false, false, "", "With extra unneeded tags",
+  Check(true, false, false, false, "", "With extra unneeded tags",
       engine, "http://example.com/-advertisement-icon.", "example.com",
       "example.com", false, "image");
   engine.removeTag("abc");
-  Check(false, false, false, "", "With removed tags",
+  Check(false, false, false, false, "", "With removed tags",
       engine, "http://example.com/-advertisement-icon.", "example.com",
       "example.com", false, "image");
 }
@@ -196,7 +204,7 @@ void TestRedirects() {
   engine.addResources("# test\n"
                       "1x1-transparent.gif image/gif;base64\n"
                       "R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\n");
-  Check(true, false, false, "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==", "Testing redirects match", engine,
+  Check(true, false, false, false, "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==", "Testing redirects match", engine,
       "http://example.com/-advertisement-icon.", "example.com", "example.com",
       false, "image");
 }
@@ -204,7 +212,7 @@ void TestRedirects() {
 void TestRedirect() {
   Engine engine("-advertisement-$redirect=test\n");
   engine.addResource("test", "application/javascript", "alert(1)");
-  Check(true, false, false, "data:application/javascript;base64,YWxlcnQoMSk=", "Testing single redirect match", engine,
+  Check(true, false, false, false, "data:application/javascript;base64,YWxlcnQoMSk=", "Testing single redirect match", engine,
       "http://example.com/-advertisement-icon.", "example.com", "example.com",
       false, "image");
 }
@@ -212,20 +220,20 @@ void TestRedirect() {
 void TestExplicitCancel() {
   Engine engine("-advertisement-icon$explicitcancel\n"
                 "@@-advertisement-icon-good\n");
-  Check(true, true, false, "", "Without needed tags", engine,
+  Check(true, true, false, false, "", "Without needed tags", engine,
       "http://example.com/-advertisement-icon", "example.com", "example.com",
       false, "image");
-  Check(false, false, true, "", "Without needed tags", engine,
+  Check(false, false, true, false, "", "Without needed tags", engine,
       "http://example.com/-advertisement-icon-good", "example.com", "example.com",
       false, "image");
 }
 
 void TestThirdParty() {
   Engine engine("-advertisement-icon$third-party");
-  Check(true, false, false, "", "Without needed tags", engine,
+  Check(true, false, false, false, "", "Without needed tags", engine,
       "http://example.com/-advertisement-icon", "example.com", "brianbondy.com",
       true, "image");
-  Check(false, false, false, "", "Without needed tags", engine,
+  Check(false, false, false, false, "", "Without needed tags", engine,
       "http://example.com/-advertisement-icon", "example.com", "example.com",
       false, "image");
 }

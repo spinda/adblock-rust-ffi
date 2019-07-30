@@ -46,7 +46,7 @@ class Engine {
   bool matches(const std::string& url, const std::string& host,
       const std::string& tab_host, bool is_third_party,
       const std::string& resource_type, bool* explicit_cancel,
-      bool* saved_from_exception,
+      bool* did_match_exception, bool* did_match_important,
       std::string *redirect);
   bool deserialize(const char* data, size_t data_size);
   void addFilter(const std::string& filter);

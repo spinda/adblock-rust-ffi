@@ -70,7 +70,8 @@ bool engine_match(C_Engine *engine,
                   bool third_party,
                   const char *resource_type,
                   bool *explicit_cancel,
-                  bool *saved_from_exception,
+                  bool *did_match_exception,
+                  bool *did_match_important,
                   char **redirect);
 
 /**

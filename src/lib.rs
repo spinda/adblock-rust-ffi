@@ -41,7 +41,8 @@ pub unsafe extern "C" fn engine_match(
     third_party: bool,
     resource_type: *const c_char,
     explicit_cancel: *mut bool,
-    saved_from_exception: *mut bool,
+    did_match_exception: *mut bool,
+    did_match_important: *mut bool,
     redirect: *mut *mut c_char,
 ) -> bool {
     let url = CStr::from_ptr(url).to_str().unwrap();
@@ -58,7 +59,8 @@ pub unsafe extern "C" fn engine_match(
         Some(third_party),
     );
     *explicit_cancel = blocker_result.explicit_cancel;
-    *saved_from_exception = blocker_result.filter != None && blocker_result.exception != None;
+    *did_match_exception = blocker_result.exception.is_some();
+    *did_match_important = blocker_result.important;
     *redirect = match blocker_result.redirect {
         Some(x) => match CString::new(x) {
             Ok(y) => y.into_raw(),
