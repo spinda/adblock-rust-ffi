@@ -250,6 +250,18 @@ void TestImportant() {
       false, "image");
 }
 
+void TestException() {
+  Engine engine("*banner.png\n");
+  Check(true, false, false, false, "", "Without exception", engine,
+      "http://example.com/ad_banner.png", "example.com", "example.com",
+      false, "image");
+
+  Engine engine2("@@*ad_banner.png\n");
+  Check(false, false, true, false, "", "With exception", engine2,
+      "http://example.com/ad_banner.png", "example.com", "example.com",
+      false, "image");
+}
+
 void TestDefaultLists() {
   std::vector<FilterList>& default_lists = FilterList::GetDefaultLists();
   assert(default_lists.size() == 7);
@@ -298,6 +310,7 @@ int main() {
   TestExplicitCancel();
   TestThirdParty();
   TestImportant();
+  TestException();
   TestDefaultLists();
   TestRegionalLists();
   cout << num_passed << " passed, " <<
